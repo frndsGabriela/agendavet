@@ -18,4 +18,20 @@ describe('CalculadoraDeTaxaCancelamento', () => {
   it('cobra 30% com 2h exatas de antecedência', () => {
     expect(calc.calcular(120, inicio, antes(2, 0), false)).toBe(36);
   });
+
+  it('cobra 50% com 1h59min de antecedência', () => {
+    expect(calc.calcular(200, inicio, antes(1, 59), false)).toBe(100);
+  });
+
+  it('cobra 50% com 30min de antecedência', () => {
+    expect(calc.calcular(200, inicio, antes(0, 30), false)).toBe(100);
+  });
+
+  it('aplica 20% de desconto na taxa para Plano Pet+', () => {
+    expect(calc.calcular(100, inicio, antes(1, 0), true)).toBe(40);
+  });
+
+  it('arredonda a taxa para 2 casas decimais', () => {
+    expect(calc.calcular(99.99, inicio, antes(1, 0), true)).toBe(40);
+  });
 });
