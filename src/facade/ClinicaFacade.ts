@@ -1,6 +1,7 @@
 import { Consulta, NovaConsulta, StatusConsulta } from '../domain/TipoAtendimento';
 import { CalculadoraDePreco } from '../pricing/RegraDePreco';
 import { DescontoPlanoPet } from '../pricing/DescontoPlanoPet';
+import { CalculadoraDeTaxaCancelamento } from '../pricing/CalculadoraDeTaxaCancelamento';
 import { IRepositorioConsultas } from '../repositories/IRepositorioConsultas';
 import { INotificador } from '../notifications/INotificador';
 
@@ -8,7 +9,8 @@ export class ClinicaFacade {
   constructor(
     private readonly repositorio: IRepositorioConsultas,
     private readonly calculadora: CalculadoraDePreco,
-    private readonly notificador: INotificador
+    private readonly notificador: INotificador,
+    private readonly calculadoraTaxaCancelamento: CalculadoraDeTaxaCancelamento = new CalculadoraDeTaxaCancelamento()
   ) {}
 
   agendar(dados: NovaConsulta): Consulta {
@@ -52,13 +54,13 @@ export class ClinicaFacade {
     });
 
     const mensagem = `Olá ${dados.tutor}! A consulta do ${dados.pet} foi agendada para ${dataFormatada}. Valor: ${valorFormatado}`;
-    
+
     this.notificador.enviar(dados.telefone, mensagem);
 
     return consultaSalva;
   }
 
-  cancelar(id: number): Consulta {
+  cancelar(id: number, momentoCancelamento: Date = new Date()): Consulta {
     const consulta = this.repositorio.buscarPorId(id);
     if (!consulta) {
       throw new Error(`Consulta com ID ${id} não existe.`);
@@ -67,7 +69,15 @@ export class ClinicaFacade {
       throw new Error(`A consulta com ID ${id} já está cancelada.`);
     }
 
+    const taxa = this.calculadoraTaxaCancelamento.calcular(
+      consulta.valor,
+      new Date(consulta.dataHora),
+      new Date(momentoCancelamento),
+      consulta.planoPetMais
+    );
+
     consulta.status = 'CANCELADA';
+    consulta.taxaCancelamento = taxa;
     this.repositorio.atualizar(consulta);
     return consulta;
   }
